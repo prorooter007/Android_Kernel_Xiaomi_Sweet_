@@ -6,7 +6,7 @@
 
 # Config
 DEVICE="sweet"
-DEFCONFIG="vendor/${DEVICE}_defconfig"
+DEFCONFIG="vendor/lightning-sweet_defconfig"
 LOG="$HOME/log.txt"
 
 # Export arch and subarch
@@ -17,36 +17,9 @@ export ARCH SUBARCH
 KERNEL_IMG=$KERNEL_DIR/out/arch/$ARCH/boot/Image.gz
 KERNEL_DTBO=$KERNEL_DIR/out/arch/$ARCH/boot/dtbo.img
 
-TG_CHAT_ID="1139604865"
-TG_BOT_TOKEN="$BOT_API_KEY"
 # End config
 
 # Function definitions
-
-# tg_sendinfo - sends text through telegram
-tg_sendinfo() {
-	curl -s "https://api.telegram.org/bot$TG_BOT_TOKEN/sendMessage" \
-		-F parse_mode=html \
-		-F text="${1}" \
-		-F chat_id="${TG_CHAT_ID}" &> /dev/null
-}
-
-# tg_pushzip - uploads final zip to telegram
-tg_pushzip() {
-	MD5CHECK=$(md5sum "$1" | cut -d' ' -f1)
-	curl -F document=@"$1"  "https://api.telegram.org/bot$TG_BOT_TOKEN/sendDocument" \
-			-F chat_id=$TG_CHAT_ID \
-			-F caption="$2 | <b>MD5 Checksum : </b><code>$MD5CHECK</code>" \
-			-F parse_mode=html &> /dev/null
-}
-
-# tg_failed - uploads build log to telegram
-tg_failed() {
-    curl -F document=@"$LOG"  "https://api.telegram.org/bot$TG_BOT_TOKEN/sendDocument" \
-        -F chat_id=$TG_CHAT_ID \
-        -F caption="$((DIFF / 60))m $((DIFF % 60))s" \
-        -F parse_mode=html &> /dev/null
-}
 
 # build_setup - enter kernel directory and get info for caption.
 # also removes the previous kernel image, if one exists.
@@ -86,12 +59,6 @@ build_kernel() {
 # build_end - creates and sends zip
 build_end() {
 
-	if ! [ -a "$KERNEL_IMG" ]; then
-        echo -e "\n> Build failed, sending logs to Telegram."
-        tg_failed
-        exit 1
-    fi
-
     echo -e "\n> Build successful! generating flashable zip..."
 	cd "$AK_DIR" || echo -e "\nAnykernel directory ($AK_DIR) does not exist" || exit 1
 	git clean -fd
@@ -109,22 +76,10 @@ build_end() {
 		ZIP_NAME="$ZIP_NAME-signed.zip"
 	fi
 
-	tg_pushzip "$ZIP_NAME" "Time taken: <code>$((DIFF / 60))m $((DIFF % 60))s</code>"
-	echo -e "\n> Sent zip through Telegram.\n> File: $ZIP_NAME"
+	curl --upload-file ./"$ZIP_NAME" https://transfer.sh/"$ZIP_NAME"
 }
 
 # End function definitions
-
-COMMIT=$(git log --pretty=format:"%s" -1)
-COMMIT_SHA=$(git rev-parse --short HEAD)
-KERNEL_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-
-CAPTION=$(echo -e \
-"HEAD: <code>$COMMIT_SHA: </code><code>$COMMIT</code>
-Branch: <code>$KERNEL_BRANCH</code>")
-
-tg_sendinfo "-- Build Triggered --
-$CAPTION"
 
 # Build device 1
 build_setup
