@@ -177,7 +177,7 @@ static void mmc_cmdq_dispatch_req(struct request_queue *q)
 static void mmc_queue_setup_discard(struct request_queue *q,
 				    struct mmc_card *card)
 {
-	unsigned int max_discard;
+	unsigned max_discard;
 
 	max_discard = mmc_calc_max_discard(card);
 	if (!max_discard)
