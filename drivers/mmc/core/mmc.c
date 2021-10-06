@@ -646,35 +646,6 @@ static int mmc_decode_ext_csd(struct mmc_card *card, u8 *ext_csd)
 		card->ext_csd.data_sector_size = 512;
 	}
 
-	if (card->ext_csd.rev >= 7) {
-		/* Enhance Strobe is supported since v5.1 which rev should be
-		 * 8 but some eMMC devices can support it with rev 7. So handle
-		 * Enhance Strobe here.
-		 */
-		card->ext_csd.strobe_support = ext_csd[EXT_CSD_STROBE_SUPPORT];
-		card->ext_csd.cmdq_support = ext_csd[EXT_CSD_CMDQ_SUPPORT];
-		card->ext_csd.fw_version = ext_csd[EXT_CSD_FIRMWARE_VERSION];
-		pr_info("%s: eMMC FW version: 0x%02x\n",
-			mmc_hostname(card->host),
-			card->ext_csd.fw_version);
-		if (card->ext_csd.cmdq_support) {
-			/*
-			 * Queue Depth = N + 1,
-			 * see JEDEC JESD84-B51 section 7.4.19
-			 */
-			card->ext_csd.cmdq_depth =
-				ext_csd[EXT_CSD_CMDQ_DEPTH] + 1;
-			pr_info("%s: CMDQ supported: depth: %d\n",
-				mmc_hostname(card->host),
-				card->ext_csd.cmdq_depth);
-		}
-	} else {
-		card->ext_csd.cmdq_support = 0;
-		card->ext_csd.cmdq_depth = 0;
-		card->ext_csd.barrier_support = 0;
-		card->ext_csd.cache_flush_policy = 0;
-	}
-
 	/*
 	 * GENERIC_CMD6_TIME is to be used "unless a specific timeout is defined
 	 * when accessing a specific field", so use it here if there is no
@@ -688,21 +659,12 @@ static int mmc_decode_ext_csd(struct mmc_card *card, u8 *ext_csd)
 
 	/* eMMC v5 or later */
 	if (card->ext_csd.rev >= 7) {
-		memcpy(card->ext_csd.fwrev, &ext_csd[EXT_CSD_FIRMWARE_VERSION],
-		       MMC_FIRMWARE_LEN);
-		card->ext_csd.ffu_capable =
-			(ext_csd[EXT_CSD_SUPPORTED_MODE] & 0x1) &&
-			!(ext_csd[EXT_CSD_FW_CONFIG] & 0x1);
-
-		card->ext_csd.pre_eol_info = ext_csd[EXT_CSD_PRE_EOL_INFO];
-		card->ext_csd.device_life_time_est_typ_a =
-			ext_csd[EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_A];
-		card->ext_csd.device_life_time_est_typ_b =
-			ext_csd[EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_B];
-	}
-
-	/* eMMC v5.1 or later */
-	if (card->ext_csd.rev >= 8) {
+		/* Enhance Strobe is supported since v5.1 which is rev 8 but
+		 * some eMMC devices can support it with rev 7. So handle
+		 * Enhance Strobe here.
+		 */
+		card->ext_csd.fw_version = ext_csd[EXT_CSD_FIRMWARE_VERSION];
+		card->ext_csd.strobe_support = ext_csd[EXT_CSD_STROBE_SUPPORT];
 		card->ext_csd.cmdq_support = ext_csd[EXT_CSD_CMDQ_SUPPORT] &
 					     EXT_CSD_CMDQ_SUPPORTED;
 		card->ext_csd.cmdq_depth = (ext_csd[EXT_CSD_CMDQ_DEPTH] &
@@ -717,6 +679,28 @@ static int mmc_decode_ext_csd(struct mmc_card *card, u8 *ext_csd)
 				 mmc_hostname(card->host),
 				 card->ext_csd.cmdq_depth);
 		}
+
+		memcpy(card->ext_csd.fwrev, &ext_csd[EXT_CSD_FIRMWARE_VERSION],
+		       MMC_FIRMWARE_LEN);
+		card->ext_csd.ffu_capable =
+			(ext_csd[EXT_CSD_SUPPORTED_MODE] & 0x1) &&
+			!(ext_csd[EXT_CSD_FW_CONFIG] & 0x1);
+
+		card->ext_csd.pre_eol_info = ext_csd[EXT_CSD_PRE_EOL_INFO];
+		card->ext_csd.device_life_time_est_typ_a =
+			ext_csd[EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_A];
+		card->ext_csd.device_life_time_est_typ_b =
+			ext_csd[EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_B];
+	} else {
+		// Shouldn't be necessary, but CAF says otherwise
+		card->ext_csd.cmdq_support = 0;
+		card->ext_csd.cmdq_depth = 0;
+		card->ext_csd.barrier_support = 0;
+		card->ext_csd.cache_flush_policy = 0;
+	}
+
+	/* eMMC v5.1 or later */
+	if (card->ext_csd.rev >= 8) {
 		card->ext_csd.enhanced_rpmb_supported =
 			(card->ext_csd.rel_param &
 			 EXT_CSD_WR_REL_PARAM_EN_RPMB_REL_WR);

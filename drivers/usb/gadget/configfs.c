@@ -149,7 +149,6 @@ struct gadget_config_name {
 };
 
 #define USB_MAX_STRING_WITH_NULL_LEN	(USB_MAX_STRING_LEN+1)
-#define MSOS_VENDOR_TYPE 0x01
 
 static int usb_string_copy(const char *s, char **s_copy)
 {
@@ -168,7 +167,6 @@ static int usb_string_copy(const char *s, char **s_copy)
 			return -ENOMEM;
 	}
 	strlcpy(str, s, USB_MAX_STRING_WITH_NULL_LEN);
-
 	if (str[ret - 1] == '\n')
 		str[ret - 1] = '\0';
 	*s_copy = str;
