@@ -6,7 +6,7 @@
 
 # Config
 DEVICE="sweet"
-DEFCONFIG="vendor/lightning-sweet_defconfig"
+DEFCONFIG="vendor/sweet_user_defconfig"
 LOG="$HOME/log.txt"
 
 # Export arch and subarch
